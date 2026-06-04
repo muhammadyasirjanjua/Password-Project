@@ -1,0 +1,3 @@
+Date: 2026-06-04 01:22:52 | Platform: Instagram | Username: yasir | Length: 5 | Score: 17 | Entropy: 16.61 | Crack Time: Instantly
+Date: 2026-06-04 01:26:15 | Platform: Instagram | Username: not_silaa | Password: Sila@123345 | Length: 11 | Score: 70 | Entropy: 72.1 | Crack Time: 16 Centuries
+Date: 2026-06-04 01:46:40 | Platform: Gmail | Username: ruqbafha jknl | Password: yahfniw | Length: 7 | Score: 33 | Entropy: 32.9 | Crack Time: Instantly
