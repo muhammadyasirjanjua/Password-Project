@@ -58,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (res.ok) {
                 updateResultsUI(data);
-                loadDashboardData(); // Refresh dashboard silently
             } else {
                 alert('Error: ' + (data.error || 'Unknown error'));
             }
@@ -156,65 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DASHBOARD ---
 
-    refreshDashBtn.addEventListener('click', loadDashboardData);
 
-    async function loadDashboardData() {
-        try {
-            const res = await fetch('/api/dashboard');
-            if (!res.ok) return;
-            const data = await res.json();
-
-            document.getElementById('dashTotal').innerText = data.total;
-            document.getElementById('dashAvg').innerText = data.average_score;
-            document.getElementById('dashWeak').innerText = data.weak_count;
-            document.getElementById('dashStrong').innerText = data.strong_count;
-
-            const recentList = document.getElementById('dashRecent');
-            recentList.innerHTML = '';
-            data.recent.reverse().forEach(log => {
-                recentList.innerHTML += `<li class="list-group-item text-muted" style="font-size: 0.85rem">${log}</li>`;
-            });
-
-            // Update Chart
-            const ctx = document.getElementById('platformsChart').getContext('2d');
-            const labels = Object.keys(data.platforms);
-            const values = Object.values(data.platforms);
-
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
-
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: [
-                            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
-                        ],
-                        borderColor: '#161c2d',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: { color: '#cbd5e1' }
-                        }
-                    }
-                }
-            });
-
-        } catch (e) {
-            console.error("Dashboard error:", e);
-        }
-    }
-
-    // Load initial data
-    loadDashboardData();
     // Pre-generate a password
     generateBtn.click();
 });

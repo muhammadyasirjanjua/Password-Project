@@ -133,8 +133,17 @@ def report(format):
         mimetype=mimetype
     )
 
+@app.route('/admin/dashboard-secret-xyz')
+def admin_dashboard():
+    return render_template('admin.html')
+
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
+    provided_key = request.headers.get('X-Dashboard-Key')
+    expected_key = os.environ.get('DASHBOARD_KEY')
+    if not provided_key or provided_key != expected_key:
+        return jsonify({"error": "Unauthorized"}), 403
+
     total = 0
     total_score = 0
     weak_count = 0
